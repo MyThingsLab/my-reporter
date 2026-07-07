@@ -41,6 +41,28 @@ def test_digest_counts_and_lists_decisions_verbatim(tmp_path: Path) -> None:
     assert "#7" in md  # pending PR (no later resolved entry)
 
 
+def test_digest_sums_usage_and_flags_friction(tmp_path: Path) -> None:
+    ledger_path, repo_root = make_ledgers(
+        tmp_path,
+        shared=[
+            entry("fleet_dispatch", "usage", "success", "run 1", ts="2026-07-07T01:00:00Z",
+                  cost_usd=0.48, wasted_output_tokens=120, denials_count=10),
+            entry("fleet_dispatch", "self_edit", "widened_allowlist", "added pytest variants",
+                  ts="2026-07-07T01:00:01Z"),
+            entry("fleet_dispatch", "friction", "needs_review", "unrecognized: curl",
+                  ts="2026-07-07T01:00:02Z"),
+        ],
+        dev=[],
+    )
+    md = Reporter(ledger_path=ledger_path, repo_root=repo_root).digest().markdown
+
+    assert "## Usage & waste" in md
+    assert "1 run(s), $0.48 total cost" in md
+    assert "10 permission denial(s), ~120 output tokens wasted" in md
+    assert "1 auto-widened allowlist change(s)" in md
+    assert "1 friction signal(s) awaiting human review" in md
+
+
 def test_empty_window_is_graceful_and_still_writes_report(tmp_path: Path) -> None:
     ledger_path, repo_root = make_ledgers(tmp_path, shared=[], dev=[])
     fake = FakeRunner()
@@ -116,6 +138,21 @@ def test_handoff_surfaces_open_threads_decisions_and_last_ship(tmp_path: Path) -
     assert "## Pending PRs" in md and "#7" in md
     assert "## Last shipped" in md and "released v0.0.1" in md
     assert "**4 ledger entries.**" not in md  # not the aggregate-digest layout
+
+
+def test_handoff_surfaces_friction_as_open_thread(tmp_path: Path) -> None:
+    ledger_path, repo_root = make_ledgers(
+        tmp_path,
+        shared=[
+            entry("fleet_dispatch", "friction", "needs_review", "unrecognized: curl -sSL foo",
+                  ts="2026-07-07T01:00:00Z"),
+        ],
+        dev=[],
+    )
+    md = Reporter(ledger_path=ledger_path, repo_root=repo_root).digest(handoff=True).markdown
+
+    assert "## Open threads" in md
+    assert "unrecognized: curl -sSL foo" in md
 
 
 def test_handoff_empty_window_reports_clean_baseline(tmp_path: Path) -> None:
