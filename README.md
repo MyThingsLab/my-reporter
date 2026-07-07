@@ -15,9 +15,12 @@ verbatim, and pending PRs. Prints it, or posts it as a GitHub issue comment.
 `digest` prints to stdout (dev loop / CI job summary, read-only). `post`
 comments the digest on an issue and writes a `kind=report` ledger entry (which
 makes "since last report" incremental). With `--summarize`, one Engine call
-appends a prose paragraph under the tables; against `NoopEngine` it degrades to
-digest-only. The `gh issue comment` side effect runs through `Policy`
-(`ALLOW` by default). MyReporter never edits the tree or opens a PR.
+appends a prose paragraph under the tables. The backend is `--engine
+{noop,claude-cli}` (default `noop` — no tokens spent, no prose either).
+`claude-cli` shells out to the `claude` CLI for a real judgment call; against
+either engine's empty/failed reply, `--summarize` degrades to digest-only. The
+`gh issue comment` side effect runs through `Policy` (`ALLOW` by default).
+MyReporter never edits the tree or opens a PR.
 
 With `--handoff`, the same merged/windowed entries render as a resume-context
 brief instead of the aggregate digest: open threads (`kind=ask`/`kind=drift`),
@@ -30,7 +33,7 @@ works on top of it, same Engine seam either way.
 
 ```bash
 myreporter digest [--since 2026-07-01T00:00:00Z] [--handoff]
-myreporter post --issue 12 --repo owner/name [--summarize] [--handoff]
+myreporter post --issue 12 --repo owner/name [--summarize] [--engine noop|claude-cli] [--handoff]
 ```
 
 ## Install (development)

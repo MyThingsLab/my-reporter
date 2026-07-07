@@ -3,7 +3,11 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from mythings.engine import ClaudeCLIEngine, Engine, NoopEngine
+
 from myreporter.reporter import Reporter
+
+_ENGINES: dict[str, type[Engine]] = {"noop": NoopEngine, "claude-cli": ClaudeCLIEngine}
 
 
 def _add_common(parser: argparse.ArgumentParser) -> None:
@@ -33,9 +37,19 @@ def main(argv: list[str] | None = None) -> int:
     _add_common(post)
     post.add_argument("--issue", type=int, required=True)
     post.add_argument("--summarize", action="store_true", help="append an Engine prose summary")
+    post.add_argument(
+        "--engine",
+        choices=sorted(_ENGINES),
+        default="noop",
+        help="Engine backend for --summarize (default: noop — no tokens spent, "
+        "no-op unless --summarize is also passed)",
+    )
 
     args = parser.parse_args(argv)
-    reporter = Reporter(ledger_path=args.ledger, repo_root=args.repo_root, repo=args.repo)
+    engine = _ENGINES[args.engine]() if args.cmd == "post" else None
+    reporter = Reporter(
+        ledger_path=args.ledger, repo_root=args.repo_root, repo=args.repo, engine=engine
+    )
 
     if args.cmd == "digest":
         print(reporter.digest(since=args.since, handoff=args.handoff).markdown)
