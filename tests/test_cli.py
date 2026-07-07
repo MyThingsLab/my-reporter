@@ -6,12 +6,18 @@ import pytest
 from mythings.engine import ClaudeCLIEngine, NoopEngine
 
 from conftest import entry, make_ledgers
-from myreporter.cli import _ENGINES, main
+from myreporter.cli import build_engine, main
 
 
-def test_engine_choices_map_to_expected_classes() -> None:
-    assert _ENGINES["noop"] is NoopEngine
-    assert _ENGINES["claude-cli"] is ClaudeCLIEngine
+def test_build_engine_maps_names_to_expected_backends() -> None:
+    assert isinstance(build_engine("noop"), NoopEngine)
+    assert isinstance(build_engine("claude-cli"), ClaudeCLIEngine)
+
+
+def test_build_engine_passes_model_through_to_claude_cli() -> None:
+    engine = build_engine("claude-cli", model="haiku")
+    assert isinstance(engine, ClaudeCLIEngine)
+    assert engine._model == "haiku"
 
 
 def test_digest_prints_markdown_to_stdout(

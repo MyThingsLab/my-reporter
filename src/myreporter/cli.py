@@ -7,7 +7,13 @@ from mythings.engine import ClaudeCLIEngine, Engine, NoopEngine
 
 from myreporter.reporter import Reporter
 
-_ENGINES: dict[str, type[Engine]] = {"noop": NoopEngine, "claude-cli": ClaudeCLIEngine}
+_ENGINE_NAMES = ("noop", "claude-cli")
+
+
+def build_engine(name: str, *, model: str | None = None) -> Engine:
+    if name == "claude-cli":
+        return ClaudeCLIEngine(model=model)
+    return NoopEngine()
 
 
 def _add_common(parser: argparse.ArgumentParser) -> None:
@@ -39,14 +45,21 @@ def main(argv: list[str] | None = None) -> int:
     post.add_argument("--summarize", action="store_true", help="append an Engine prose summary")
     post.add_argument(
         "--engine",
-        choices=sorted(_ENGINES),
+        choices=sorted(_ENGINE_NAMES),
         default="noop",
         help="Engine backend for --summarize (default: noop — no tokens spent, "
         "no-op unless --summarize is also passed)",
     )
+    post.add_argument(
+        "--engine-model",
+        help="model for --engine claude-cli (default: the CLI's own default; "
+        "ignored by noop)",
+    )
 
     args = parser.parse_args(argv)
-    engine = _ENGINES[args.engine]() if args.cmd == "post" else None
+    engine = (
+        build_engine(args.engine, model=args.engine_model) if args.cmd == "post" else None
+    )
     reporter = Reporter(
         ledger_path=args.ledger, repo_root=args.repo_root, repo=args.repo, engine=engine
     )
