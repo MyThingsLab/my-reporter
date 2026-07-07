@@ -9,7 +9,7 @@ from mythings.ledger import Ledger, LedgerEntry
 
 _HIGH_SIGNAL = ("ship", "decision")
 _PR_RESOLVED = ("merged", "shipped", "closed")
-_OPEN_THREAD_KINDS = ("ask", "drift")
+_OPEN_THREAD_KINDS = ("ask", "drift", "friction")
 
 
 @dataclass(frozen=True)
@@ -78,6 +78,32 @@ def _window_label(window: Window) -> str:
     return f"{window.start} → {window.end}" if window.start else f"all-time → {window.end}"
 
 
+def _usage_section(entries: list[LedgerEntry]) -> str:
+    # Numeric fields a tool logs on a `kind=usage` entry (see fleet_dispatch.py's
+    # ClaudeCLIEngine-style headless dispatch) — summed here, not re-derived, so a
+    # tool's own accounting stays the source of truth.
+    usage = [e for e in entries if e.kind == "usage"]
+    if not usage:
+        return ""
+    total_cost = sum(e.data.get("cost_usd", 0.0) for e in usage)
+    total_wasted = sum(e.data.get("wasted_output_tokens", 0) for e in usage)
+    total_denials = sum(e.data.get("denials_count", 0) for e in usage)
+    self_edits = [e for e in entries if e.kind == "self_edit"]
+    friction = [e for e in entries if e.kind == "friction" and e.outcome == "needs_review"]
+
+    lines = [
+        "",
+        "## Usage & waste",
+        f"- {len(usage)} run(s), ${total_cost:.2f} total cost",
+        f"- {total_denials} permission denial(s), ~{total_wasted} output tokens wasted",
+    ]
+    if self_edits:
+        lines.append(f"- {len(self_edits)} auto-widened allowlist change(s)")
+    if friction:
+        lines.append(f"- {len(friction)} friction signal(s) awaiting human review")
+    return "\n".join(lines)
+
+
 def render_markdown(entries: list[LedgerEntry], window: Window) -> str:
     parts = [f"# MyThingsLab report — {_window_label(window)}", ""]
     if not entries:
@@ -103,6 +129,10 @@ def render_markdown(entries: list[LedgerEntry], window: Window) -> str:
     if pending:
         parts += ["", "## Pending PRs"]
         parts += [f"- #{pr} ({e.tool}, `{e.ts}`)" for pr, e in pending]
+
+    usage_section = _usage_section(entries)
+    if usage_section:
+        parts.append(usage_section)
 
     return "\n".join(parts)
 
