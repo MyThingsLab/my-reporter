@@ -17,8 +17,10 @@ covered here defers to `HARNESS.md`, then `mythings-core/docs/CONVENTIONS.md`.
 - **The single Engine call:** optional. Deterministic by default. With
   `--summarize`, one Engine call turns the already-computed markdown digest into
   a prose paragraph appended under the tables — the model only rewrites the
-  digest, it never sees raw ledger data to hallucinate against. Against
-  `NoopEngine` the reply is empty, so `--summarize` degrades to "digest only".
+  digest, it never sees raw ledger data to hallucinate against. Backend chosen
+  via `--engine {noop,claude-cli}` (default `noop`). Against `NoopEngine`, or on
+  a `ClaudeCLIEngine` failure, the reply is empty, so `--summarize` degrades to
+  "digest only".
 - **Invariants / rules:** read-only — never mutates other tools' ledger entries,
   never edits the repo tree, never opens a PR. Its one side effect is
   `gh issue comment`, wrapped as `Action(kind="bash", ...)` through
