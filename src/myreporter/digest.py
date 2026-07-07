@@ -9,6 +9,7 @@ from mythings.ledger import Ledger, LedgerEntry
 
 _HIGH_SIGNAL = ("ship", "decision")
 _PR_RESOLVED = ("merged", "shipped", "closed")
+_OPEN_THREAD_KINDS = ("ask", "drift")
 
 
 @dataclass(frozen=True)
@@ -106,6 +107,38 @@ def render_markdown(entries: list[LedgerEntry], window: Window) -> str:
     return "\n".join(parts)
 
 
-def build_digest(entries: list[LedgerEntry], window: Window) -> Digest:
+def render_handoff_markdown(entries: list[LedgerEntry], window: Window) -> str:
+    # Resume context for the next session/agent, not a human activity report:
+    # what's unresolved, why past decisions were made, what shipped last.
+    parts = [f"# MyThingsLab handoff — resume context ({_window_label(window)})", ""]
+
+    open_threads = [e for e in entries if e.kind in _OPEN_THREAD_KINDS]
+    if open_threads:
+        parts += ["", "## Open threads"]
+        parts += [f"- `{e.ts}` **{e.tool}/{e.kind}**: {e.detail}" for e in open_threads]
+
+    decisions = [e for e in entries if e.kind == "decision"]
+    if decisions:
+        parts += ["", "## Recent decisions"]
+        parts += [f"- `{e.ts}` **{e.tool}**: {e.detail}" for e in decisions[-5:]]
+
+    pending = pending_prs(entries)
+    if pending:
+        parts += ["", "## Pending PRs"]
+        parts += [f"- #{pr} ({e.tool}, `{e.ts}`)" for pr, e in pending]
+
+    ships = [e for e in entries if e.kind == "ship"]
+    if ships:
+        last = max(ships, key=lambda e: e.ts)
+        parts += ["", "## Last shipped", f"- `{last.ts}` **{last.tool}**: {last.detail}"]
+
+    if not (open_threads or decisions or pending or ships):
+        parts.append("_Clean baseline — nothing pending, no open threads._")
+
+    return "\n".join(parts)
+
+
+def build_digest(entries: list[LedgerEntry], window: Window, *, handoff: bool = False) -> Digest:
     windowed = in_window(entries, window.start)
-    return Digest(window=window, entries=windowed, markdown=render_markdown(windowed, window))
+    render = render_handoff_markdown if handoff else render_markdown
+    return Digest(window=window, entries=windowed, markdown=render(windowed, window))

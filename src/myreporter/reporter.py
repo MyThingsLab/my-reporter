@@ -52,18 +52,31 @@ class Reporter:
         self.engine: Engine = engine or NoopEngine()
         self.policy: Policy = policy or _AllowPolicy()
 
-    def digest(self, *, since: str | None = None, summarize: bool = False) -> Digest:
+    def digest(
+        self,
+        *,
+        since: str | None = None,
+        summarize: bool = False,
+        handoff: bool = False,
+    ) -> Digest:
         entries = load_entries(self.ledger_path, self.repo_root)
         start = since if since is not None else last_report_end(entries)
-        result = build_digest(entries, Window(start=start, end=_now()))
+        result = build_digest(entries, Window(start=start, end=_now()), handoff=handoff)
         if summarize:
             result = self._summarize(result)
         return result
 
-    def post(self, issue: int, *, since: str | None = None, summarize: bool = False) -> Digest:
-        result = self.digest(since=since, summarize=summarize)
+    def post(
+        self,
+        issue: int,
+        *,
+        since: str | None = None,
+        summarize: bool = False,
+        handoff: bool = False,
+    ) -> Digest:
+        result = self.digest(since=since, summarize=summarize, handoff=handoff)
         url = self._comment(issue, result.markdown)
-        self._record(result, url)
+        self._record(result, url, handoff=handoff)
         return result
 
     def _summarize(self, result: Digest) -> Digest:
@@ -83,14 +96,16 @@ class Reporter:
             return None
         return self.runner(argv).strip() or None
 
-    def _record(self, result: Digest, comment_url: str | None) -> None:
+    def _record(self, result: Digest, comment_url: str | None, *, handoff: bool = False) -> None:
+        mode = "handoff" if handoff else "digest"
         self.ledger.record(
             tool="myreporter",
             kind="report",
             outcome="success",
-            detail=f"digest for {result.window.start or 'all-time'} → {result.window.end}",
+            detail=f"{mode} for {result.window.start or 'all-time'} → {result.window.end}",
             window_start=result.window.start,
             window_end=result.window.end,
             entries_count=result.count,
             comment_url=comment_url,
+            mode=mode,
         )

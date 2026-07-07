@@ -11,6 +11,12 @@ def _add_common(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--repo", help="GitHub slug owner/name")
     parser.add_argument("--ledger", type=Path, default=Path(".mythings/ledger.jsonl"))
     parser.add_argument("--repo-root", type=Path, default=Path.cwd())
+    parser.add_argument(
+        "--handoff",
+        action="store_true",
+        help="render a resume-context brief (open threads, decisions, last ship) "
+        "instead of the aggregate digest",
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -32,11 +38,14 @@ def main(argv: list[str] | None = None) -> int:
     reporter = Reporter(ledger_path=args.ledger, repo_root=args.repo_root, repo=args.repo)
 
     if args.cmd == "digest":
-        print(reporter.digest(since=args.since).markdown)
+        print(reporter.digest(since=args.since, handoff=args.handoff).markdown)
         return 0
 
-    result = reporter.post(args.issue, since=args.since, summarize=args.summarize)
-    print(f"posted digest ({result.count} entries) to {args.repo}#{args.issue}")
+    result = reporter.post(
+        args.issue, since=args.since, summarize=args.summarize, handoff=args.handoff
+    )
+    mode = "handoff" if args.handoff else "digest"
+    print(f"posted {mode} ({result.count} entries) to {args.repo}#{args.issue}")
     return 0
 
 
