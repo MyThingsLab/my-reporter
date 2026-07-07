@@ -14,6 +14,55 @@ def test_engine_choices_map_to_expected_classes() -> None:
     assert _ENGINES["claude-cli"] is ClaudeCLIEngine
 
 
+def test_digest_prints_markdown_to_stdout(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _, repo_root = make_ledgers(
+        tmp_path, shared=[entry("mytester", "run", "success", "cover pkg:f")], dev=[]
+    )
+    monkeypatch.chdir(repo_root)
+
+    exit_code = main(["digest", "--repo-root", str(repo_root)])
+
+    assert exit_code == 0
+    out = capsys.readouterr().out
+    assert "MyThingsLab report" in out
+    assert "mytester" in out
+
+
+def test_digest_handoff_renders_the_handoff_brief(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _, repo_root = make_ledgers(
+        tmp_path, shared=[entry("mytester", "run", "success", "cover pkg:f")], dev=[]
+    )
+    monkeypatch.chdir(repo_root)
+
+    exit_code = main(["digest", "--handoff", "--repo-root", str(repo_root)])
+
+    assert exit_code == 0
+    assert capsys.readouterr().out.strip()  # a non-empty brief was rendered
+
+
+def test_post_handoff_reports_the_handoff_mode(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _, repo_root = make_ledgers(
+        tmp_path, shared=[entry("mytester", "run", "success", "cover pkg:f")], dev=[]
+    )
+    monkeypatch.chdir(repo_root)
+    # No --repo: Reporter._comment short-circuits before any `gh` subprocess runs.
+    exit_code = main(["post", "--issue", "1", "--handoff", "--repo-root", str(repo_root)])
+
+    assert exit_code == 0
+    assert "posted handoff" in capsys.readouterr().out
+
+
+def test_missing_subcommand_is_a_usage_error() -> None:
+    with pytest.raises(SystemExit):
+        main([])
+
+
 def test_post_defaults_to_noop_engine_and_summarize_is_a_noop(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
