@@ -92,6 +92,39 @@ def test_summarize_appends_prose(tmp_path: Path) -> None:
     assert "Two runs happened this week." in result.markdown
 
 
+def test_handoff_surfaces_open_threads_decisions_and_last_ship(tmp_path: Path) -> None:
+    ledger_path, repo_root = make_ledgers(
+        tmp_path,
+        shared=[
+            entry("mytester", "run", "success", "cover pkg:f", ts="2026-07-06T01:00:00Z", pr=7),
+            entry("myguard", "ask", "success", "destructive push needs sign-off",
+                  ts="2026-07-06T01:30:00Z"),
+        ],
+        dev=[
+            entry("claude-code", "decision", "success", "chose JSON over YAML",
+                  ts="2026-07-06T00:30:00Z"),
+            entry("claude-code", "ship", "success", "released v0.0.1", ts="2026-07-06T00:45:00Z"),
+        ],
+    )
+    md = Reporter(ledger_path=ledger_path, repo_root=repo_root).digest(handoff=True).markdown
+
+    assert "resume context" in md
+    assert "## Open threads" in md
+    assert "destructive push needs sign-off" in md
+    assert "## Recent decisions" in md
+    assert "chose JSON over YAML" in md
+    assert "## Pending PRs" in md and "#7" in md
+    assert "## Last shipped" in md and "released v0.0.1" in md
+    assert "**4 ledger entries.**" not in md  # not the aggregate-digest layout
+
+
+def test_handoff_empty_window_reports_clean_baseline(tmp_path: Path) -> None:
+    ledger_path, repo_root = make_ledgers(tmp_path, shared=[], dev=[])
+    md = Reporter(ledger_path=ledger_path, repo_root=repo_root).digest(handoff=True).markdown
+
+    assert "Clean baseline" in md
+
+
 def test_summarize_degrades_to_digest_only_on_empty_reply(tmp_path: Path) -> None:
     ledger_path, repo_root = make_ledgers(
         tmp_path,

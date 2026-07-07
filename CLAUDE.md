@@ -11,6 +11,9 @@ covered here defers to `HARNESS.md`, then `mythings-core/docs/CONVENTIONS.md`.
 - **Purpose:** reads the shared `Ledger` and each repo's `dev-ledger/`, and
   produces a markdown digest (counts by tool/kind/outcome, decisions/ships
   verbatim, pending PRs). Prints it, or posts it as a GitHub issue comment.
+  `--handoff` renders the same windowed entries as a resume-context brief
+  (open threads, recent decisions, pending PRs, last ship) for a new
+  session/agent to read instead of re-deriving state from raw history.
 - **The single Engine call:** optional. Deterministic by default. With
   `--summarize`, one Engine call turns the already-computed markdown digest into
   a prose paragraph appended under the tables — the model only rewrites the

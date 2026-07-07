@@ -19,11 +19,18 @@ appends a prose paragraph under the tables; against `NoopEngine` it degrades to
 digest-only. The `gh issue comment` side effect runs through `Policy`
 (`ALLOW` by default). MyReporter never edits the tree or opens a PR.
 
+With `--handoff`, the same merged/windowed entries render as a resume-context
+brief instead of the aggregate digest: open threads (`kind=ask`/`kind=drift`),
+the last few `kind=decision` entries verbatim, pending PRs, and the most recent
+`kind=ship`. It's meant for a new session or agent to read instead of
+re-deriving "what's going on" from raw git/ledger history — `--summarize` still
+works on top of it, same Engine seam either way.
+
 ## Usage
 
 ```bash
-myreporter digest [--since 2026-07-01T00:00:00Z]
-myreporter post --issue 12 --repo owner/name [--summarize]
+myreporter digest [--since 2026-07-01T00:00:00Z] [--handoff]
+myreporter post --issue 12 --repo owner/name [--summarize] [--handoff]
 ```
 
 ## Install (development)
