@@ -1,5 +1,7 @@
 # my-reporter
 
+[![CI](https://github.com/MyThingsLab/my-reporter/actions/workflows/ci.yml/badge.svg)](https://github.com/MyThingsLab/my-reporter/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/MyThingsLab/my-reporter/branch/main/graph/badge.svg)](https://codecov.io/gh/MyThingsLab/my-reporter) ![Python](https://img.shields.io/badge/python-3.11%2B-blue) [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 Reads the shared `Ledger` and each repo's `dev-ledger/`, and produces a markdown
 digest of build activity — counts by tool/kind/outcome, decisions and ships
 verbatim, and pending PRs. Prints it, or posts it as a GitHub issue comment.
