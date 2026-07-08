@@ -42,7 +42,7 @@ myreporter post --issue 12 --repo owner/name [--summarize] [--engine noop|claude
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
-pip install -e ../mythings-core -e ".[dev]"
+pip install -e ../my-things-core -e ".[dev]"
 pytest
 ```
 
