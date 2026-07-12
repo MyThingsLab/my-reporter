@@ -5,7 +5,7 @@ from pathlib import Path
 from mythings.engine import EngineResult
 from mythings.ledger import Ledger
 
-from conftest import FakeRunner, entry, make_ledgers
+from conftest import entry, gh_comment, make_ledgers
 from myreporter.reporter import Reporter
 
 
@@ -65,7 +65,7 @@ def test_digest_sums_usage_and_flags_friction(tmp_path: Path) -> None:
 
 def test_empty_window_is_graceful_and_still_writes_report(tmp_path: Path) -> None:
     ledger_path, repo_root = make_ledgers(tmp_path, shared=[], dev=[])
-    fake = FakeRunner()
+    fake = gh_comment()
     reporter = Reporter(
         ledger_path=ledger_path, repo_root=repo_root, repo="owner/name", runner=fake
     )
