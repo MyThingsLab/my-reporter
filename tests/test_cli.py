@@ -50,6 +50,36 @@ def test_digest_handoff_renders_the_handoff_brief(
     assert capsys.readouterr().out.strip()  # a non-empty brief was rendered
 
 
+def test_digest_quiet_if_clean_prints_nothing_and_exits_nonzero(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _, repo_root = make_ledgers(tmp_path, shared=[], dev=[])
+    monkeypatch.chdir(repo_root)
+
+    exit_code = main(
+        ["digest", "--handoff", "--quiet-if-clean", "--repo-root", str(repo_root)]
+    )
+
+    assert exit_code == 2
+    assert capsys.readouterr().out == ""
+
+
+def test_digest_quiet_if_clean_still_prints_when_there_is_content(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _, repo_root = make_ledgers(
+        tmp_path, shared=[entry("myguard", "ask", "success", "needs sign-off")], dev=[]
+    )
+    monkeypatch.chdir(repo_root)
+
+    exit_code = main(
+        ["digest", "--handoff", "--quiet-if-clean", "--repo-root", str(repo_root)]
+    )
+
+    assert exit_code == 0
+    assert "needs sign-off" in capsys.readouterr().out
+
+
 def test_post_handoff_reports_the_handoff_mode(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:

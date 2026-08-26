@@ -128,7 +128,8 @@ def test_handoff_surfaces_open_threads_decisions_and_last_ship(tmp_path: Path) -
             entry("claude-code", "ship", "success", "released v0.0.1", ts="2026-07-06T00:45:00Z"),
         ],
     )
-    md = Reporter(ledger_path=ledger_path, repo_root=repo_root).digest(handoff=True).markdown
+    result = Reporter(ledger_path=ledger_path, repo_root=repo_root).digest(handoff=True)
+    md = result.markdown
 
     assert "resume context" in md
     assert "## Open threads" in md
@@ -138,6 +139,7 @@ def test_handoff_surfaces_open_threads_decisions_and_last_ship(tmp_path: Path) -
     assert "## Pending PRs" in md and "#7" in md
     assert "## Last shipped" in md and "released v0.0.1" in md
     assert "**4 ledger entries.**" not in md  # not the aggregate-digest layout
+    assert result.has_content is True
 
 
 def test_handoff_surfaces_friction_as_open_thread(tmp_path: Path) -> None:
@@ -157,9 +159,18 @@ def test_handoff_surfaces_friction_as_open_thread(tmp_path: Path) -> None:
 
 def test_handoff_empty_window_reports_clean_baseline(tmp_path: Path) -> None:
     ledger_path, repo_root = make_ledgers(tmp_path, shared=[], dev=[])
-    md = Reporter(ledger_path=ledger_path, repo_root=repo_root).digest(handoff=True).markdown
+    result = Reporter(ledger_path=ledger_path, repo_root=repo_root).digest(handoff=True)
 
-    assert "Clean baseline" in md
+    assert "Clean baseline" in result.markdown
+    assert result.has_content is False  # lets a caller skip an empty-repo section
+
+
+def test_aggregate_digest_always_reports_content(tmp_path: Path) -> None:
+    # has_content has no "nothing to say" state outside --handoff.
+    ledger_path, repo_root = make_ledgers(tmp_path, shared=[], dev=[])
+    result = Reporter(ledger_path=ledger_path, repo_root=repo_root).digest(handoff=False)
+
+    assert result.has_content is True
 
 
 def test_summarize_degrades_to_digest_only_on_empty_reply(tmp_path: Path) -> None:
