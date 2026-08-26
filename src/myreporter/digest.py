@@ -23,6 +23,10 @@ class Digest:
     window: Window
     entries: list[LedgerEntry] = field(default_factory=list)
     markdown: str = ""
+    # Only meaningful for a --handoff digest: False when it rendered nothing
+    # but the "clean baseline" placeholder. Always True for the aggregate
+    # digest, which has no equivalent "nothing to say" state.
+    has_content: bool = True
 
     @property
     def count(self) -> int:
@@ -137,6 +141,15 @@ def render_markdown(entries: list[LedgerEntry], window: Window) -> str:
     return "\n".join(parts)
 
 
+def handoff_has_content(entries: list[LedgerEntry]) -> bool:
+    return bool(
+        [e for e in entries if e.kind in _OPEN_THREAD_KINDS]
+        or [e for e in entries if e.kind == "decision"]
+        or pending_prs(entries)
+        or [e for e in entries if e.kind == "ship"]
+    )
+
+
 def render_handoff_markdown(entries: list[LedgerEntry], window: Window) -> str:
     # Resume context for the next session/agent, not a human activity report:
     # what's unresolved, why past decisions were made, what shipped last.
@@ -171,4 +184,7 @@ def render_handoff_markdown(entries: list[LedgerEntry], window: Window) -> str:
 def build_digest(entries: list[LedgerEntry], window: Window, *, handoff: bool = False) -> Digest:
     windowed = in_window(entries, window.start)
     render = render_handoff_markdown if handoff else render_markdown
-    return Digest(window=window, entries=windowed, markdown=render(windowed, window))
+    has_content = handoff_has_content(windowed) if handoff else True
+    return Digest(
+        window=window, entries=windowed, markdown=render(windowed, window), has_content=has_content
+    )

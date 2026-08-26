@@ -38,6 +38,12 @@ def main(argv: list[str] | None = None) -> int:
 
     digest = sub.add_parser("digest", help="print the markdown digest to stdout")
     _add_common(digest)
+    digest.add_argument(
+        "--quiet-if-clean",
+        action="store_true",
+        help="with --handoff: print nothing and exit 2 instead of a "
+        "'clean baseline' placeholder (for a caller concatenating many repos)",
+    )
 
     post = sub.add_parser("post", help="comment the digest on an issue")
     _add_common(post)
@@ -65,7 +71,10 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     if args.cmd == "digest":
-        print(reporter.digest(since=args.since, handoff=args.handoff).markdown)
+        result = reporter.digest(since=args.since, handoff=args.handoff)
+        if args.quiet_if_clean and not result.has_content:
+            return 2
+        print(result.markdown)
         return 0
 
     result = reporter.post(
