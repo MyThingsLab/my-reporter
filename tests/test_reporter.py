@@ -45,12 +45,30 @@ def test_digest_sums_usage_and_flags_friction(tmp_path: Path) -> None:
     ledger_path, repo_root = make_ledgers(
         tmp_path,
         shared=[
-            entry("fleet_dispatch", "usage", "success", "run 1", ts="2026-07-07T01:00:00Z",
-                  cost_usd=0.48, wasted_output_tokens=120, denials_count=10),
-            entry("fleet_dispatch", "self_edit", "widened_allowlist", "added pytest variants",
-                  ts="2026-07-07T01:00:01Z"),
-            entry("fleet_dispatch", "friction", "needs_review", "unrecognized: curl",
-                  ts="2026-07-07T01:00:02Z"),
+            entry(
+                "fleet_dispatch",
+                "usage",
+                "success",
+                "run 1",
+                ts="2026-07-07T01:00:00Z",
+                cost_usd=0.48,
+                wasted_output_tokens=120,
+                denials_count=10,
+            ),
+            entry(
+                "fleet_dispatch",
+                "self_edit",
+                "widened_allowlist",
+                "added pytest variants",
+                ts="2026-07-07T01:00:01Z",
+            ),
+            entry(
+                "fleet_dispatch",
+                "friction",
+                "needs_review",
+                "unrecognized: curl",
+                ts="2026-07-07T01:00:02Z",
+            ),
         ],
         dev=[],
     )
@@ -86,8 +104,14 @@ def test_since_last_report_is_incremental(tmp_path: Path) -> None:
         tmp_path,
         shared=[
             entry("claude-code", "build", "success", "old work", ts="2026-07-01T00:00:00Z"),
-            entry("myreporter", "report", "success", "prior", ts="2026-07-05T00:00:00Z",
-                  window_end="2026-07-05T00:00:00Z"),
+            entry(
+                "myreporter",
+                "report",
+                "success",
+                "prior",
+                ts="2026-07-05T00:00:00Z",
+                window_end="2026-07-05T00:00:00Z",
+            ),
             entry("mytester", "run", "success", "new work", ts="2026-07-06T00:00:00Z"),
         ],
         dev=[],
@@ -119,12 +143,22 @@ def test_handoff_surfaces_open_threads_decisions_and_last_ship(tmp_path: Path) -
         tmp_path,
         shared=[
             entry("mytester", "run", "success", "cover pkg:f", ts="2026-07-06T01:00:00Z", pr=7),
-            entry("myguard", "ask", "success", "destructive push needs sign-off",
-                  ts="2026-07-06T01:30:00Z"),
+            entry(
+                "myguard",
+                "ask",
+                "success",
+                "destructive push needs sign-off",
+                ts="2026-07-06T01:30:00Z",
+            ),
         ],
         dev=[
-            entry("claude-code", "decision", "success", "chose JSON over YAML",
-                  ts="2026-07-06T00:30:00Z"),
+            entry(
+                "claude-code",
+                "decision",
+                "success",
+                "chose JSON over YAML",
+                ts="2026-07-06T00:30:00Z",
+            ),
             entry("claude-code", "ship", "success", "released v0.0.1", ts="2026-07-06T00:45:00Z"),
         ],
     )
@@ -146,8 +180,13 @@ def test_handoff_surfaces_friction_as_open_thread(tmp_path: Path) -> None:
     ledger_path, repo_root = make_ledgers(
         tmp_path,
         shared=[
-            entry("fleet_dispatch", "friction", "needs_review", "unrecognized: curl -sSL foo",
-                  ts="2026-07-07T01:00:00Z"),
+            entry(
+                "fleet_dispatch",
+                "friction",
+                "needs_review",
+                "unrecognized: curl -sSL foo",
+                ts="2026-07-07T01:00:00Z",
+            ),
         ],
         dev=[],
     )
@@ -185,3 +224,39 @@ def test_summarize_degrades_to_digest_only_on_empty_reply(tmp_path: Path) -> Non
 
     assert len(engine.calls) == 1
     assert "## Summary" not in result.markdown  # still a complete digest
+
+
+def test_handoff_surfaces_failures_and_blockers(tmp_path: Path) -> None:
+    ledger_path, repo_root = make_ledgers(
+        tmp_path,
+        shared=[
+            entry(
+                "mycoder",
+                "code",
+                "needs_review",
+                "tests failed",
+                ts="2026-09-13T10:00:00Z",
+                issue=5,
+                failing_tests=["test_a"],
+            ),
+            entry(
+                "fleet_dispatch",
+                "dispatch",
+                "blocked",
+                "waiting for upstream",
+                ts="2026-09-13T11:00:00Z",
+                candidate="my-things-core#150",
+                blocker="my-things-core#148",
+            ),
+        ],
+        dev=[],
+    )
+    result = Reporter(ledger_path=ledger_path, repo_root=repo_root).digest(handoff=True)
+    md = result.markdown
+
+    assert "## Recent failures & blockers" in md
+    assert "#5 tests failed" in md
+    assert "[failing: test_a]" in md
+    assert "#my-things-core#150 waiting for upstream" in md
+    assert "(blocked on my-things-core#148)" in md
+    assert result.has_content is True

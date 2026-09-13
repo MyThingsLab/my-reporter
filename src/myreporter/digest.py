@@ -141,12 +141,24 @@ def render_markdown(entries: list[LedgerEntry], window: Window) -> str:
     return "\n".join(parts)
 
 
+def recent_failures_and_blockers(entries: list[LedgerEntry]) -> list[LedgerEntry]:
+    items = []
+    for e in entries:
+        if e.outcome in ("failed", "failure", "blocked", "needs_review") and e.kind not in (
+            "report",
+            "usage",
+        ):
+            items.append(e)
+    return items
+
+
 def handoff_has_content(entries: list[LedgerEntry]) -> bool:
     return bool(
         [e for e in entries if e.kind in _OPEN_THREAD_KINDS]
         or [e for e in entries if e.kind == "decision"]
         or pending_prs(entries)
         or [e for e in entries if e.kind == "ship"]
+        or recent_failures_and_blockers(entries)
     )
 
 
@@ -159,6 +171,19 @@ def render_handoff_markdown(entries: list[LedgerEntry], window: Window) -> str:
     if open_threads:
         parts += ["", "## Open threads"]
         parts += [f"- `{e.ts}` **{e.tool}/{e.kind}**: {e.detail}" for e in open_threads]
+
+    failures = recent_failures_and_blockers(entries)
+    if failures:
+        parts += ["", "## Recent failures & blockers"]
+        for e in failures[-5:]:
+            cand = e.data.get("candidate") or e.data.get("issue")
+            prefix = f"#{cand} " if cand else ""
+            blocker = e.data.get("blocker")
+            blocker_note = f" (blocked on {blocker})" if blocker else ""
+            failing = e.data.get("failing_tests")
+            failing_note = f" [failing: {', '.join(failing)}]" if failing else ""
+            msg = f"{prefix}{e.detail}{blocker_note}{failing_note}"
+            parts.append(f"- `{e.ts}` **{e.tool}/{e.outcome}**: {msg}")
 
     decisions = [e for e in entries if e.kind == "decision"]
     if decisions:
@@ -175,7 +200,7 @@ def render_handoff_markdown(entries: list[LedgerEntry], window: Window) -> str:
         last = max(ships, key=lambda e: e.ts)
         parts += ["", "## Last shipped", f"- `{last.ts}` **{last.tool}**: {last.detail}"]
 
-    if not (open_threads or decisions or pending or ships):
+    if not (open_threads or failures or decisions or pending or ships):
         parts.append("_Clean baseline — nothing pending, no open threads._")
 
     return "\n".join(parts)
