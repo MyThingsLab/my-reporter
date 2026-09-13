@@ -1,0 +1,1 @@
+{"data":{"files":"src/myreporter/digest.py,tests/test_reporter.py","session":"2026-09-13"},"detail":"Surface recent failures and blockers in handoff digests","kind":"build","outcome":"success","tool":"claude-code","ts":"2026-09-13T14:48:25Z"}
