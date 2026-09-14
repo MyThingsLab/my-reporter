@@ -3,17 +3,11 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from mythings.engine import ClaudeCLIEngine, Engine, NoopEngine
+from mythings.engine import build_engine_from_args
 
 from myreporter.reporter import Reporter
 
 _ENGINE_NAMES = ("noop", "claude-cli")
-
-
-def build_engine(name: str, *, model: str | None = None) -> Engine:
-    if name == "claude-cli":
-        return ClaudeCLIEngine(model=model)
-    return NoopEngine()
 
 
 def _add_common(parser: argparse.ArgumentParser) -> None:
@@ -63,9 +57,7 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     args = parser.parse_args(argv)
-    engine = (
-        build_engine(args.engine, model=args.engine_model) if args.cmd == "post" else None
-    )
+    engine = build_engine_from_args(args) if args.cmd == "post" else None
     reporter = Reporter(
         ledger_path=args.ledger, repo_root=args.repo_root, repo=args.repo, engine=engine
     )
